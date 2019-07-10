@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import numpy as np
-
 from FitEllipse import get_ellipse_attributes
 from ProcessPupil import get_threshold
 from UtilFuncs import get_frame, get_eyelid_coordinates, get_pupil_coordinates
