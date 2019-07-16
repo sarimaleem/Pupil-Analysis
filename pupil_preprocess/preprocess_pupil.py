@@ -9,7 +9,6 @@ import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-
 def _find_nearest(array, value):
     idx = (np.abs(array - value)).idxmin()
     return idx
@@ -44,8 +43,9 @@ def _butter_highpass_filter(data, lowcut, fs, order=5):
 def _detect_blinks(df, blink_detection_measure='pupil', cutoff=50, coalesce_period=1):
     pupil = (np.array(df[blink_detection_measure]) - np.median(df[blink_detection_measure])) / np.median(
         df[blink_detection_measure])
-    pupil_diff = np.diff(pupil) / np.median(np.diff(df.time))  # % signal change / s
-    blink_periods = np.array(df.loc[np.where((pupil_diff < -cutoff) | (pupil_diff > cutoff))[0], 'time'])
+    pupil_diff = np.concatenate((np.array([0]), np.diff(pupil) / np.median(np.diff(df.time))))  # % signal change / s
+    # blink_periods = np.array(df.loc[np.where((pupil_diff < -cutoff) | (pupil_diff > cutoff))[0], 'time'])
+    blink_periods = np.array(df.loc[np.where((pupil_diff < -cutoff) | (pupil_diff > cutoff) | np.array(df['is_blink']==1))[0], 'time'])
     blink_periods = blink_periods[blink_periods != df['time'].iloc[0]]
     blink_periods = blink_periods[blink_periods != df['time'].iloc[-1]]
     if len(blink_periods) > 0:
@@ -99,27 +99,7 @@ def slope_pupil(df, hp=2.0, fs=15, order=3):
     df['pupil_slope'] = slope
 
 
-def preprocess_pupil(params, df):
-
-
-    # unpack:
-    fs = params['fs']
-    hp = params['hp']
-    lp = params['lp']
-    order = params['order']
-    s_hp = params['s_hp']
-
-    df['time'] = np.linspace(0, df.shape[0] / fs, df.shape[0])
-    interpolate_blinks(df=df)
-    filter_pupil(df=df, fs=fs, hp=hp, lp=lp, order=order)
-    psc_pupil(df=df)
-    fraction_pupil(df=df)
-    slope_pupil(df=df, hp=s_hp, fs=fs, order=order)
-
-    return df
-
-
-def plot_preprocessing(df, path, animal_name):
+def plot_preprocessing(df, output_dir, subject_id):
 
     # plot:
     fig = plt.figure(figsize=(8, 6))
@@ -146,5 +126,21 @@ def plot_preprocessing(df, path, animal_name):
     plt.ylabel('Pupil slope (a.u.)')
     plt.tight_layout()
 
-    fig.savefig(path + '/' + animal_name + 'time_series_graph.png')
+    fig.savefig(os.path.join(output_dir, subject_id + '_time_series_graph.png'))
 
+def preprocess_pupil(df, params, output_dir, subject_id):
+
+    # preprocess:    
+    interpolate_blinks(df=df)
+    filter_pupil(df=df, fs=params['fs'], hp=params['hp'], lp=params['lp'], order=params['order'])
+    psc_pupil(df=df)
+    fraction_pupil(df=df)
+    slope_pupil(df=df, hp=params['s_hp'], fs=params['fs'], order=params['order'])
+    
+    # plot:
+    plot_preprocessing(df, output_dir, subject_id)
+
+    # save:
+    df.to_hdf(os.path.join(output_dir, subject_id + '_df_pupil.hdf'), key='pupil')
+    
+    return df

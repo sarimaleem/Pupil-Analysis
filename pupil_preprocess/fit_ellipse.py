@@ -9,7 +9,6 @@ from numba import jit
 #  [x1 x2 x3 ... x8], 
 # ]
 
-
 @jit(nopython=True)
 def fit_ellipse(x, y):
     x = x.reshape((x.shape[0], 1))
@@ -23,7 +22,6 @@ def fit_ellipse(x, y):
     n = np.argmax(np.abs(E))
     a = V[:, n]
     return a
-
 
 def ellipse_center(a):
     b, c, d, f, g, a = a[1] / 2, a[2], a[3] / 2, a[4] / 2, a[5], a[0]
@@ -83,37 +81,3 @@ def get_ellipse_attributes(x, y):
     dictionary = {"center": center, "phi": phi, "axes": axes, "area": area, "x": xx, "y": yy}
 
     return dictionary
-
-
-def get_ellipse_attributes_time_series(x, y, mask):
-    a_time_series = get_a_times_series(x, y, mask)
-
-    center = ellipse_center(a_time_series.T).T
-    phi = ellipse_angle_of_rotation(a_time_series.T).T
-    axes_length = ellipse_axis_length(a_time_series.T).T
-    minor = np.sort(axes_length)[:, 0]
-    major = np.sort(axes_length)[:, 1]
-    a = axes_length[:, 0]
-    b = axes_length[:, 1]
-    area = np.pi * a * b
-
-    df = pd.DataFrame(
-        {'centerX': center[:, 0], 'centerY': center[:, 1], 'pupil': area, 'minor': minor, 'major': major,
-         'phi': phi})
-
-    return df
-
-
-@jit(nopython=True, parallel=True)  # numba for optimizing loops
-def get_a_times_series(x, y, mask):
-
-    assert x.shape[1] == 8, 'time series not proper shape'
-    a_time_series = np.zeros(shape=(x.shape[0], 6))
-
-    for n in range(x.shape[0]):
-        x_masked = x[n][mask[n]]
-        y_masked = y[n][mask[n]]
-
-        a_time_series[n] = fit_ellipse(x_masked, y_masked)
-
-    return a_time_series
