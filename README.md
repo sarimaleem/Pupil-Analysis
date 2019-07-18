@@ -1,3 +1,3 @@
 # Pupil-Analysis
 
-Run the project through main.py
+library for analyzing deeplabcut pupil data. Includes functions that interpolates blinks, normalizes the time series, fits ellipses to the pupil, and just general preprocessing.
